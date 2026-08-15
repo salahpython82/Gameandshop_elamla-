@@ -21,8 +21,10 @@ import { CategoryAndLevelSelect } from "./components/CategoryAndLevelSelect";
 import { VersusModeView } from "./components/VersusModeView";
 import { AiGeneratorView } from "./components/AiGeneratorView";
 import { AnalyticsView } from "./components/AnalyticsView";
-import { LeaderboardAndStoreView } from "./components/LeaderboardAndStoreView";
+import { LeaderboardView } from "./components/LeaderboardView";
+import { StoreView } from "./components/StoreView";
 import { AdminDashboardView } from "./components/AdminDashboardView";
+import { AncientCoinsView } from "./components/AncientCoinsView";
 import { AuthModal } from "./components/AuthModal";
 import { QuizPlayerModal } from "./components/QuizPlayerModal";
 import { DailyRewardModal } from "./components/DailyRewardModal";
@@ -194,7 +196,7 @@ export default function App() {
       <HeaderNavbar
         user={userProfile}
         onOpenSettings={() => setShowSettings(true)}
-        onOpenStore={() => setCurrentView("leaderboard")}
+        onOpenStore={() => setCurrentView("store")}
         onToggleSound={() =>
           setUserProfile((prev) => ({ ...prev, soundEnabled: !prev.soundEnabled }))
         }
@@ -231,6 +233,31 @@ export default function App() {
           />
         )}
 
+        {/* Dedicated App & Ancient Coins Store View */}
+        {currentView === "store" && (
+          <StoreView
+            user={userProfile}
+            powerUps={powerUps}
+            onBuyPowerUp={handleBuyPowerUp}
+            onChangeAvatar={(av) => setUserProfile((prev) => ({ ...prev, avatar: av }))}
+            onUpdateUserCoins={(newAmount) =>
+              setUserProfile((prev) => ({ ...prev, coins: newAmount }))
+            }
+            onNavigateView={(view) => setCurrentView(view)}
+          />
+        )}
+
+        {/* Ancient Coins Market, Appraisal & Museum View */}
+        {currentView === "vintage_coins" && (
+          <AncientCoinsView
+            user={userProfile}
+            onUpdateUserCoins={(newAmount) =>
+              setUserProfile((prev) => ({ ...prev, coins: newAmount }))
+            }
+            onNavigateHome={() => setCurrentView("home")}
+          />
+        )}
+
         {/* AI Generator is strictly Admin-only inside Admin Dashboard */}
         {currentView === "ai_generator" && (
           isAdmin ? (
@@ -257,13 +284,9 @@ export default function App() {
           <AnalyticsView user={userProfile} onClaimReward={handleClaimReward} />
         )}
 
+        {/* Dedicated Leaderboard View */}
         {currentView === "leaderboard" && (
-          <LeaderboardAndStoreView
-            user={userProfile}
-            powerUps={powerUps}
-            onBuyPowerUp={handleBuyPowerUp}
-            onChangeAvatar={(av) => setUserProfile((prev) => ({ ...prev, avatar: av }))}
-          />
+          <LeaderboardView user={userProfile} />
         )}
 
         {/* Admin Dashboard View - accessible only if Admin */}

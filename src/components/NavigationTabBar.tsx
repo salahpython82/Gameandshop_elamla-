@@ -1,6 +1,6 @@
 import React from "react";
 import { GameView } from "../types";
-import { Home, Layers, Swords, Bot, BarChart3, Trophy, Crown } from "lucide-react";
+import { Home, Layers, Swords, Coins, Trophy, Crown, ShoppingBag } from "lucide-react";
 import { soundFx } from "../utils/sound";
 
 interface NavigationTabBarProps {
@@ -17,8 +17,9 @@ export const NavigationTabBar: React.FC<NavigationTabBarProps> = ({
   const tabs = [
     { id: "home" as GameView, label: "الرئيسية", icon: Home },
     { id: "levels" as GameView, label: "المستويات", icon: Layers },
+    { id: "store" as GameView, label: "المتجر", icon: ShoppingBag, isStore: true },
+    { id: "vintage_coins" as GameView, label: "المسكوكات", icon: Coins, isVintageCoins: true },
     { id: "vs_mode" as GameView, label: "تحدي VS", icon: Swords },
-    { id: "analytics" as GameView, label: "الإحصائيات", icon: BarChart3 },
     { id: "leaderboard" as GameView, label: "المتصدرين", icon: Trophy },
     ...(isAdmin
       ? [{ id: "admin" as GameView, label: "لوحة التحكم", icon: Crown, isAdminTab: true }]

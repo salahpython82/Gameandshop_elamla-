@@ -1,6 +1,6 @@
 import React from "react";
 import { GameView, UserProfile } from "../types";
-import { Play, HelpCircle, Layers, BarChart3, Gift, Trophy, Swords, Sparkles, Award, Flame, Disc } from "lucide-react";
+import { Play, HelpCircle, Layers, BarChart3, Gift, Trophy, Swords, Sparkles, Award, Flame, Disc, Coins, ShoppingBag } from "lucide-react";
 import { soundFx } from "../utils/sound";
 
 interface HomeViewProps {
@@ -49,10 +49,10 @@ export const HomeView: React.FC<HomeViewProps> = ({
         {/* Game Title & Treasure Illustration */}
         <div className="my-4">
           <h1 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-100 drop-shadow-sm mb-2">
-            لعبة ذكاء وتحدي
+            تحدي المسكوكات والقطع القديمة
           </h1>
           <p className="text-slate-300 text-sm max-w-md mx-auto leading-relaxed">
-            اختبر ثقافتك وأبحر في عالم الألغاز، التاريخ، والعلوم مع مساعد الذكاء الاصطناعي الذكي!
+            اختبر معلوماتك في تاريخ العملات القديمة، مسكوكات نوميديا، سكة بايلك الجزائر، والدينار الجزائري الحديث!
           </p>
         </div>
 
@@ -128,7 +128,59 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           </div>
 
-          {/* Card 3: AI Challenge (VS Mode) */}
+          {/* Card 3: Ancient Coins (سوق وتقييم العملات القديمة) */}
+          <div
+            onClick={() => {
+              soundFx.playClick();
+              onNavigate("vintage_coins");
+            }}
+            className="group cursor-pointer p-4 bg-gradient-to-r from-amber-950/70 via-slate-900 to-yellow-950/70 hover:from-amber-900/80 hover:to-yellow-900/80 rounded-2xl border-2 border-amber-500/50 hover:border-amber-400 shadow-xl transition-all duration-200 flex items-center gap-4 relative overflow-hidden"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-amber-500/30 group-hover:scale-110 transition-transform">
+              <Coins className="w-6 h-6 text-slate-950" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-amber-200 text-base group-hover:text-amber-100 transition-colors">
+                  العملات النقدية القديمة
+                </h3>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/40">
+                  بيع وشراء وتقييم 🏛️
+                </span>
+              </div>
+              <p className="text-xs text-slate-300">
+                سوق المسكوكات الأثرية وفحص وتثمين النقود بالذكاء الاصطناعي
+              </p>
+            </div>
+          </div>
+
+          {/* Card 4: Dedicated Store (متجر المسكوكات والأدوات) */}
+          <div
+            onClick={() => {
+              soundFx.playClick();
+              onNavigate("store");
+            }}
+            className="group cursor-pointer p-4 bg-gradient-to-r from-amber-950/80 via-slate-900 to-yellow-950/70 hover:from-amber-900/90 hover:to-yellow-900/90 rounded-2xl border-2 border-amber-500/50 hover:border-amber-400 shadow-xl transition-all duration-200 flex items-center gap-4 relative overflow-hidden"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-amber-500/30 group-hover:scale-110 transition-transform">
+              <ShoppingBag className="w-6 h-6 text-slate-950" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-amber-200 text-base group-hover:text-amber-100 transition-colors">
+                  متجر التطبيق والمسكوكات
+                </h3>
+                <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/40">
+                  شراء وبيع DZD 🛍️
+                </span>
+              </div>
+              <p className="text-xs text-slate-300">
+                سوق المسكوكات الحقيقية، شراء وسائل المساعدة (Power-ups)، والأفاتارات الملكية
+              </p>
+            </div>
+          </div>
+
+          {/* Card 5: AI Challenge (VS Mode) */}
           <div
             onClick={() => {
               soundFx.playClick();
@@ -147,7 +199,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
           </div>
 
-          {/* Card 4: Leaderboard & Store */}
+          {/* Card 6: Leaderboard */}
           <div
             onClick={() => {
               soundFx.playClick();
@@ -160,9 +212,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </div>
             <div className="flex-1">
               <h3 className="font-bold text-slate-100 text-base group-hover:text-amber-300 transition-colors">
-                لوحة المتصدرين والمتجر
+                لوحة المتصدرين وتصنيف الأذكياء
               </h3>
-              <p className="text-xs text-slate-400">شراء التعزيزات ومنافسة نخبة الأذكياء</p>
+              <p className="text-xs text-slate-400">شاهد قائمة العباقرة ومعدلات IQ والنجوم</p>
             </div>
           </div>
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { QuizCategory, LevelData } from "../types";
 import { INITIAL_CATEGORIES } from "../data/initialData";
-import { Lock, Star, Play, ChevronLeft, Brain, BookOpen, Castle, Atom, Globe, Quote, Sparkles } from "lucide-react";
+import { Lock, Star, Play, ChevronLeft, Brain, BookOpen, Castle, Atom, Globe, Quote, Sparkles, Landmark, Crown, Coins, Swords, Shield, Compass } from "lucide-react";
 import { soundFx } from "../utils/sound";
 
 interface CategoryAndLevelSelectProps {
@@ -12,9 +12,16 @@ interface CategoryAndLevelSelectProps {
 
 // Icon helper map
 const ICON_MAP: Record<string, React.ElementType> = {
+  Landmark,
+  Crown,
+  Coins,
+  Swords,
+  Sparkles,
+  Castle,
+  Shield,
+  Compass,
   Brain,
   BookOpen,
-  Castle,
   Atom,
   Globe,
   Quote,

@@ -5,6 +5,8 @@ import {
   QuizCategory,
   AuthAccount,
   Difficulty,
+  MarketOrder,
+  PLATFORM_TRANSACTION_FEE_DZD,
 } from "../types";
 import {
   ADMIN_EMAIL,
@@ -18,6 +20,8 @@ import {
   getStoredAnnouncements,
   saveAnnouncements,
   Announcement,
+  getStoredMarketOrders,
+  saveMarketOrders,
 } from "../utils/storage";
 import { soundFx } from "../utils/sound";
 import { generateQuizQuestions } from "../utils/aiGenerator";
@@ -53,6 +57,12 @@ import {
   Sparkles,
   Tag,
   Play,
+  ShoppingBag,
+  DollarSign,
+  Package,
+  Phone,
+  Truck,
+  CreditCard,
 } from "lucide-react";
 
 interface AdminDashboardViewProps {
@@ -62,7 +72,7 @@ interface AdminDashboardViewProps {
   onStartGeneratedQuiz?: (questions: Question[], title: string) => void;
 }
 
-type AdminTab = "questions" | "ai_generator" | "users" | "categories" | "announcements" | "stats" | "backup";
+type AdminTab = "questions" | "ai_generator" | "market_fees" | "users" | "categories" | "announcements" | "stats" | "backup";
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   currentUser,
@@ -77,6 +87,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [categories, setCategories] = useState<QuizCategory[]>(getStoredCategories());
   const [accounts, setAccounts] = useState<AuthAccount[]>(getStoredAccounts());
   const [announcements, setAnnouncements] = useState<Announcement[]>(getStoredAnnouncements());
+  const [marketOrders, setMarketOrders] = useState<MarketOrder[]>(getStoredMarketOrders());
+
+  // Market Orders Filters & Search for Admin
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>("all");
+  const [orderPaymentFilter, setOrderPaymentFilter] = useState<string>("all");
 
   // Search & Filter for Questions
   const [searchQuery, setSearchQuery] = useState("");
@@ -396,6 +412,86 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     reader.readAsText(file);
   };
 
+  // --- Market Orders & Platform Fee Handlers (100 DZD per Order) ---
+  const handleUpdateAdminOrderStatus = (orderId: string, newStatus: MarketOrder["orderStatus"]) => {
+    soundFx.playClick();
+    const updated = marketOrders.map((o) => (o.id === orderId ? { ...o, orderStatus: newStatus } : o));
+    setMarketOrders(updated);
+    saveMarketOrders(updated);
+    showNotice(`تم تحديث حالة طلب السوق [${orderId}] إلى: ${newStatus}`);
+  };
+
+  const handleExportFeeReport = () => {
+    const totalFees = marketOrders.length * PLATFORM_TRANSACTION_FEE_DZD;
+    const totalVolume = marketOrders.reduce((acc, o) => acc + o.priceDzd, 0);
+    const totalPayouts = marketOrders.reduce(
+      (acc, o) => acc + (o.sellerPayoutDzd || Math.max(0, o.priceDzd - PLATFORM_TRANSACTION_FEE_DZD)),
+      0
+    );
+
+    const report = {
+      reportTitle: "كشف حساب عمولات واقتطاعات منصة المسكوكات النقدية الحقيقية لمالك التطبيق",
+      platformOwner: ADMIN_EMAIL,
+      generatedAt: new Date().toISOString(),
+      feePolicy: "اقتطاع 100 دينار جزائري (100 DZD) ثابتة لكل عملية بيع وشراء",
+      summary: {
+        totalOrdersCount: marketOrders.length,
+        platformFeePerOrderDzd: PLATFORM_TRANSACTION_FEE_DZD,
+        totalOwnerFeesEarnedDzd: totalFees,
+        totalMarketVolumeDzd: totalVolume,
+        totalSellerNetPayoutsDzd: totalPayouts,
+      },
+      ordersLedger: marketOrders.map((o) => ({
+        orderId: o.id,
+        listingTitle: o.listingTitle,
+        storeName: o.storeName,
+        sellerEmail: o.sellerEmail,
+        buyerName: o.buyerName,
+        buyerPhone: o.buyerPhone,
+        buyerWilaya: o.buyerAddressWilaya,
+        grossPriceDzd: o.priceDzd,
+        appOwnerDeductionDzd: o.platformFeeDzd || PLATFORM_TRANSACTION_FEE_DZD,
+        sellerNetPayoutDzd: o.sellerPayoutDzd || Math.max(0, o.priceDzd - PLATFORM_TRANSACTION_FEE_DZD),
+        paymentMethod: o.paymentMethod,
+        orderStatus: o.orderStatus,
+        trackingNumber: o.trackingNumber,
+        createdAt: o.createdAt,
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `app_owner_fee_statement_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    showNotice("تم تنزيل كشف حساب عمولات مالك التطبيق بنجاح! 📑💰");
+  };
+
+  // Filtered Market Orders
+  const filteredMarketOrders = marketOrders.filter((order) => {
+    const matchesSearch =
+      !orderSearchQuery ||
+      order.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+      order.listingTitle.toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+      order.buyerName.toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+      order.storeName.toLowerCase().includes(orderSearchQuery.toLowerCase()) ||
+      order.buyerAddressWilaya.toLowerCase().includes(orderSearchQuery.toLowerCase());
+
+    const matchesStatus = orderStatusFilter === "all" || order.orderStatus === orderStatusFilter;
+    const matchesPayment = orderPaymentFilter === "all" || order.paymentMethod === orderPaymentFilter;
+
+    return matchesSearch && matchesStatus && matchesPayment;
+  });
+
+  // Key Financial Totals
+  const totalOwnerFeesCollected = marketOrders.length * PLATFORM_TRANSACTION_FEE_DZD;
+  const totalMarketVolume = marketOrders.reduce((acc, o) => acc + o.priceDzd, 0);
+  const totalSellerNetPayouts = marketOrders.reduce(
+    (acc, o) => acc + (o.sellerPayoutDzd || Math.max(0, o.priceDzd - PLATFORM_TRANSACTION_FEE_DZD)),
+    0
+  );
+
   // Filtered Questions
   const filteredQuestions = questions.filter((q) => {
     const matchesCategory =
@@ -518,6 +614,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
         {[
           { id: "questions" as AdminTab, label: "بنك الأسئلة", icon: HelpCircle, count: questions.length },
           { id: "ai_generator" as AdminTab, label: "مولد AI الذكي", icon: Bot, isSpecialAi: true },
+          { id: "market_fees" as AdminTab, label: "خزينة الاقتطاعات (100 د.ج)", icon: DollarSign, count: marketOrders.length },
           { id: "users" as AdminTab, label: "إدارة اللاعبين", icon: Users, count: accounts.length },
           { id: "categories" as AdminTab, label: "التصنيفات والمستويات", icon: FolderTree, count: categories.length },
           { id: "announcements" as AdminTab, label: "التنبيهات والهدايا", icon: Bell, count: announcements.length },
@@ -963,6 +1060,225 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: MARKET COINS TRANSACTION FEES & OWNER TREASURY (100 DZD) */}
+      {activeTab === "market_fees" && (
+        <div className="space-y-5 animate-fade-in">
+          {/* Header Card */}
+          <div className="p-5 bg-gradient-to-r from-amber-950/70 via-slate-900 to-yellow-950/60 rounded-3xl border-2 border-amber-500/40 shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center text-2xl font-black shadow-lg">
+                  💰
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-amber-200">
+                    خزينة وعمولات مبيعات المسكوكات الحقيقية (100 د.ج/عملية)
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    اقتطاع نظامي ثابت قدره <strong className="text-amber-400 font-bold">100 د.ج</strong> عن كل عملية بيع وشراء حقيقية لفائدة مالك التطبيق (<span className="text-amber-300 font-mono">{ADMIN_EMAIL}</span>)
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handleExportFeeReport}
+                className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black text-xs rounded-xl shadow-lg flex items-center gap-2 transition active:scale-95 shrink-0"
+              >
+                <Download className="w-4 h-4" />
+                <span>تصدير كشف حساب العمولات (JSON)</span>
+              </button>
+            </div>
+
+            {/* Metrics Dashboard */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-amber-500/20">
+              <div className="p-3.5 bg-slate-900/90 rounded-2xl border border-amber-500/30">
+                <div className="text-[11px] text-amber-400 font-bold">إجمالي دخل مالك التطبيق (100 د.ج)</div>
+                <div className="text-xl sm:text-2xl font-black text-amber-300 mt-1 font-mono">
+                  {totalOwnerFeesCollected.toLocaleString()} <span className="text-xs text-slate-400">د.ج</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5 font-semibold">
+                  (100 د.ج × {marketOrders.length} معاملة)
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-slate-900/90 rounded-2xl border border-slate-800">
+                <div className="text-[11px] text-slate-400">إجمالي حجم التداول بالدينار</div>
+                <div className="text-xl sm:text-2xl font-black text-slate-100 mt-1 font-mono">
+                  {totalMarketVolume.toLocaleString()} <span className="text-xs text-slate-400">د.ج</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">القيمة الإجمالية للمسكوكات</div>
+              </div>
+
+              <div className="p-3.5 bg-slate-900/90 rounded-2xl border border-emerald-500/30">
+                <div className="text-[11px] text-emerald-400 font-bold">صافي مستحقات المتاجر</div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-400 mt-1 font-mono">
+                  {totalSellerNetPayouts.toLocaleString()} <span className="text-xs text-slate-400">د.ج</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">بعد خصم رسم المنصة</div>
+              </div>
+
+              <div className="p-3.5 bg-slate-900/90 rounded-2xl border border-blue-500/30">
+                <div className="text-[11px] text-blue-400 font-bold">عدد الصفقات المسجلة</div>
+                <div className="text-xl sm:text-2xl font-black text-blue-300 mt-1 font-mono">
+                  {marketOrders.length} <span className="text-xs text-slate-400">طلب</span>
+                </div>
+                <div className="text-[10px] text-slate-400 mt-0.5">في جميع الولايات الجزائرية</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Controls */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-slate-900 border border-slate-800 rounded-2xl">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
+              <input
+                type="text"
+                placeholder="ابحث برقم الطلب، اسم القطعة، المشتري، المتجر، أو الولاية..."
+                value={orderSearchQuery}
+                onChange={(e) => setOrderSearchQuery(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl pr-9 pl-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={orderStatusFilter}
+                onChange={(e) => setOrderStatusFilter(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+              >
+                <option value="all">كل الحالات ({marketOrders.length})</option>
+                <option value="قيد المراجعة">قيد المراجعة</option>
+                <option value="تم الدفع وتجهيز الطرد">تم الدفع وتجهيز الطرد</option>
+                <option value="تم الشحن مع شركة التوصيل">تم الشحن مع شركة التوصيل</option>
+                <option value="تم الاستلام بنجاح">تم الاستلام بنجاح</option>
+                <option value="ملغي">ملغي</option>
+              </select>
+
+              <select
+                value={orderPaymentFilter}
+                onChange={(e) => setOrderPaymentFilter(e.target.value)}
+                className="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500"
+              >
+                <option value="all">كل وسائل الدفع</option>
+                <option value="baridimob">بريد موب (BaridiMob)</option>
+                <option value="cod">الدفع عند الاستلام</option>
+                <option value="mastercard">بطاقة بنكية</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Orders / Transactions Ledger */}
+          <div className="space-y-3">
+            {filteredMarketOrders.length === 0 ? (
+              <div className="text-center py-12 bg-slate-900/50 border border-slate-800 rounded-2xl text-slate-400 text-sm">
+                لا توجد معاملات مسكوكات تطابق البحث الحالي.
+              </div>
+            ) : (
+              filteredMarketOrders.map((order) => {
+                const ownerFee = order.platformFeeDzd || PLATFORM_TRANSACTION_FEE_DZD;
+                const sellerNet = order.sellerPayoutDzd || Math.max(0, order.priceDzd - ownerFee);
+
+                return (
+                  <div
+                    key={order.id}
+                    className="p-4 bg-slate-900/90 border border-slate-800 hover:border-amber-500/40 rounded-2xl transition space-y-3"
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                            {order.id}
+                          </span>
+                          <h4 className="font-bold text-sm text-slate-100">{order.listingTitle}</h4>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">
+                          المتجر: <strong className="text-amber-300">{order.storeName}</strong> • البائع: {order.sellerEmail} • التاريخ: {order.createdAt}
+                        </p>
+                      </div>
+
+                      {/* Status Selector for Admin */}
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <span className="text-[11px] text-slate-400">تحديث الحالة:</span>
+                        <select
+                          value={order.orderStatus}
+                          onChange={(e) =>
+                            handleUpdateAdminOrderStatus(
+                              order.id,
+                              e.target.value as MarketOrder["orderStatus"]
+                            )
+                          }
+                          className={`text-xs font-bold rounded-xl px-2.5 py-1.5 border focus:outline-none ${
+                            order.orderStatus === "تم الاستلام بنجاح"
+                              ? "bg-emerald-950 text-emerald-300 border-emerald-500/40"
+                              : order.orderStatus === "تم الشحن مع شركة التوصيل"
+                              ? "bg-blue-950 text-blue-300 border-blue-500/40"
+                              : order.orderStatus === "تم الدفع وتجهيز الطرد"
+                              ? "bg-amber-950 text-amber-300 border-amber-500/40"
+                              : "bg-slate-800 text-slate-300 border-slate-700"
+                          }`}
+                        >
+                          <option value="قيد المراجعة">قيد المراجعة</option>
+                          <option value="تم الدفع وتجهيز الطرد">تم الدفع وتجهيز الطرد</option>
+                          <option value="تم الشحن مع شركة التوصيل">تم الشحن مع شركة التوصيل</option>
+                          <option value="تم الاستلام بنجاح">تم الاستلام بنجاح</option>
+                          <option value="ملغي">ملغي</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Financial Ledger Row - 100 DZD Owner Fee Highlight */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                        <span className="text-slate-400">سعر البيع الإجمالي:</span>
+                        <span className="font-bold text-slate-100 font-mono">
+                          {order.priceDzd.toLocaleString()} د.ج
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-gradient-to-r from-amber-950/50 to-slate-900 rounded-xl border border-amber-500/40 flex items-center justify-between">
+                        <span className="text-amber-300 font-bold flex items-center gap-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                          <span>اقتطاع مالك التطبيق:</span>
+                        </span>
+                        <span className="font-black text-amber-400 font-mono text-sm bg-amber-500/20 px-2 py-0.5 rounded">
+                          +{ownerFee} د.ج
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 bg-slate-950/80 rounded-xl border border-emerald-500/30 flex items-center justify-between">
+                        <span className="text-emerald-400 font-medium">صافي استحقاق البائع:</span>
+                        <span className="font-black text-emerald-400 font-mono">
+                          {sellerNet.toLocaleString()} د.ج
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Buyer & Shipping Info */}
+                    <div className="p-2.5 bg-slate-950/60 rounded-xl border border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-300">
+                      <div>
+                        <span>المشتري: </span>
+                        <strong className="text-slate-100">{order.buyerName}</strong>
+                        <span className="mx-1 text-slate-500">•</span>
+                        <span className="text-slate-400">الهاتف: {order.buyerPhone}</span>
+                        <span className="mx-1 text-slate-500">•</span>
+                        <span className="text-slate-400">العنوان: {order.buyerAddressWilaya}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 font-mono text-[11px] self-end sm:self-center">
+                        <span className="text-slate-400">تتبع الشحن:</span>
+                        <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+                          {order.trackingNumber}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
 
