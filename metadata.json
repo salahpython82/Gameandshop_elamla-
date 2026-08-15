@@ -1,0 +1,6 @@
+{
+  "name": "لعبة ذكاء وتحدي - مسابقة المعرفة والألغاز",
+  "description": "تطبيق مسابقات وألغاز تفاعلية باللغة العربية مع تحدي المستويات، الذكاء الاصطناعي، لوحة الصدارة، وتحليلات الأداء.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
